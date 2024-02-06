@@ -1,0 +1,99 @@
+name: CI/CD Pipeline Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Clean up workspace
+        run: rm -rf ./*
+
+      - name: Set up SSH key and directory
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/private_key
+          chmod 600 ~/.ssh/private_key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+  configure-git:
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Configure Git
+        run: |
+          git --version
+          git config --global user.username "abdullah-zia-22"
+          git config --global user.email "sipra58@gmail.com"
+          git config user.username
+          git config user.email
+
+  setup-path:
+      needs: prepare
+      runs-on: ubuntu-latest
+      outputs:
+        repo_url: ${{ steps.repo_url.outputs.repo_url }}
+        folder_name: ${{ steps.folder.outputs.folder_name }}
+      steps:
+        - name: Setting up Folder name
+          id: folder
+          run: |
+            folder_name=$(basename ${{ github.repository }})
+            echo "Folder name is: $folder_name"
+            echo "Folder path is: /var/www/backend/$folder_name"
+            echo "folder_name=$folder_name" >> $GITHUB_OUTPUT
+
+        - name: Setting up Repo Url
+          id: repo_url
+          run: |
+            repo_url="https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git"
+            echo "repo url is: $repo_url"
+            echo "repo_url=$repo_url" >> $GITHUB_OUTPUT
+
+  docker-build-ec2:
+    runs-on: ubuntu-latest
+    needs: setup-path
+    steps:  
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            repo_url="https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git"
+            cd /var/www/backend/
+            if [ -d "${{needs.setup-path.outputs.folder_name}}" ]; then
+              cd ${{needs.setup-path.outputs.folder_name}}
+              git pull origin main
+            else
+              git clone $repo_url
+            fi
+            cd /var/www/backend/${{needs.setup-path.outputs.folder_name}}
+            image_name=$(echo "${{ needs.setup-path.outputs.folder_name }}" | tr '[:upper:]' '[:lower:]')_api
+            sudo docker stop $image_name 
+            sudo docker rm $image_name -f 
+            sudo docker rmi $image_name -f
+            sudo docker build -f Dockerfile \
+              --build-arg DB_HOST=${{ secrets.DB_HOST }} \
+              --build-arg DB_NAME=${{ secrets.DB_NAME }} \
+              --build-arg DB_USER=${{ secrets.DB_USER }} \
+              --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              --build-arg DB_PORT=${{ secrets.DB_PORT }} \
+              --build-arg ENVIRONMENT=${{ secrets.ENVIRONMENT }} \
+              -t $image_name .
+
+            sudo docker run -d --name $image_name -p ${{ secrets.DEPLOY_PORT }}:5000 $image_name &&
+            sudo systemctl reload nginx
+
+            sudo firewall-cmd --add-port ${{ secrets.DEPLOY_PORT }}/tcp
