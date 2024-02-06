@@ -75,7 +75,7 @@ jobs:
             cd /var/www/backend/
             if [ -d "${{needs.setup-path.outputs.folder_name}}" ]; then
               cd ${{needs.setup-path.outputs.folder_name}}
-              git pull origin main
+              git pull origin main --allow-unrelated-histories
             else
               git clone $repo_url
             fi

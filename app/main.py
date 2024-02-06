@@ -3,7 +3,7 @@ from app.api.v1.router import api_router
 from starlette.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
-app = FastAPI(title="ShoutAboutUs")
+app = FastAPI(title="FastAPI")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
