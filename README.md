@@ -7,6 +7,7 @@ Before setting up this CI/CD pipeline, make sure you have the following prerequi
 * GitHub repository containing your FastAPI application code.
 * SSH access to the EC2 instance.
 * AWS Security Group rules allowing traffic on the necessary ports (e.g., 7001).
+* firewalld Installed on EC2 instance.
   
 These files are required for database setup.
   
@@ -43,7 +44,7 @@ The CI/CD pipeline is defined in the .github/workflows/aws.yml file. Here's an o
 * The latest code is pulled from the repository.
 * Latest code has changes in codebase.
 * Dockerfile is being build and run on port.
-* The pipeline opens port (added in secrets) on the EC2 instance and restarts Nginx to apply changes.
+* The pipeline opens port (added in secrets) on the EC2 instance.
 
 # Usage
 To use this CI/CD pipeline for your FastAPI application:

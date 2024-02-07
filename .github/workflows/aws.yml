@@ -93,7 +93,5 @@ jobs:
               --build-arg ENVIRONMENT=${{ secrets.ENVIRONMENT }} \
               -t $image_name .
 
-            sudo docker run -d --name $image_name -p ${{ secrets.DEPLOY_PORT }}:5000 $image_name &&
-            sudo systemctl reload nginx
-
+            sudo docker run -d --name $image_name -p ${{ secrets.DEPLOY_PORT }}:5000 $image_name
             sudo firewall-cmd --add-port ${{ secrets.DEPLOY_PORT }}/tcp
