@@ -15,7 +15,7 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 @app.get("/",tags=["Home Page"])
 def home():
-    return {"Welcome": "Welcome to the FastAPI CI CD Changed"}
+    return {"Welcome": "Welcome to the FastAPI CI CD"}
 
 
 
